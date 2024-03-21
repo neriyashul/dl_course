@@ -4,6 +4,7 @@ from keras.models import Sequential
 from keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Normalization
 from keras.preprocessing import image_dataset_from_directory
 from keras.callbacks import EarlyStopping
+from keras.metrics import Recall, Precision, F1Score
 from matplotlib import pyplot as plt
 import numpy as np
 import tensorflow as tf
@@ -62,44 +63,92 @@ import os
 import tensorflow as tf
 from keras.preprocessing.image import load_img#, img_to_array
 
+import random
+import time
+
 
 def load_images_from_directory(normal_dir, pneumonia_dir, target_size, color_mode):
-    images = []
-    labels = []
-    
-    # TODO: remove it
-    counter = 0
-
-    for filename in os.listdir(normal_dir):
-        img = load_img(os.path.join(normal_dir, filename), target_size=target_size, color_mode=color_mode)
-        img_array = img_to_array(img)
-        images.append(img_array)
-        labels.append('normal')
-        
-        # TODO: remove it
-        counter += 1
-        if counter > 10:
-            break
-
-    for filename in os.listdir(pneumonia_dir):
-        if 'virus' in filename:  # adjust this as needed
-            img = load_img(os.path.join(pneumonia_dir, filename), target_size=target_size, color_mode=color_mode)
-            img_array = img_to_array(img)
-            images.append(img_array)
-            labels.append('virus')
+    catalog = {"BACTERIA":[], "VIRUS":[], "NORMAL":[] }
+#    print(os.listdir(pneumonia_dir))
+    for curr_file in os.listdir(pneumonia_dir):
+        img = load_img(os.path.join(pneumonia_dir, curr_file), target_size=target_size, color_mode=color_mode)
+        img_data = tf.keras.utils.img_to_array(img)
+        if "virus" in curr_file:
+            catalog["VIRUS"].append(img_data)
         else:
-            img = load_img(os.path.join(pneumonia_dir, filename), target_size=target_size, color_mode=color_mode)
-            img_array = img_to_array(img)
-            images.append(img_array)
-            labels.append('bacteria')
-            
-        # TODO: remove it
-        counter += 1
-        if counter > 20:
-            break
-    dataset = tf.data.Dataset.from_tensor_slices((images, labels))
-    dataset = dataset.batch(batch_size)
-    return dataset
+            catalog["BACTERIA"].append(img_data)
+
+#    print(os.listdir(normal_dir))
+    for curr_file in os.listdir(normal_dir):
+        img = load_img(os.path.join(normal_dir, curr_file), target_size=target_size, color_mode=color_mode)
+        img_data = tf.keras.utils.img_to_array(img)
+        catalog["NORMAL"].append(img_data)
+
+    images_and_labels = []
+    for element in catalog["BACTERIA"]:
+        images_and_labels.append([element, 1])
+    for element in catalog["VIRUS"]:
+        images_and_labels.append([element, 2])
+    for element in catalog["NORMAL"]:
+        images_and_labels.append([element, 0])
+
+    random.shuffle(images_and_labels)
+    images_arr = [x for [x, y] in images_and_labels]
+    labels_arr = [y for [x, y] in images_and_labels]
+
+    from keras.utils import to_categorical
+    labels_arr = to_categorical(labels_arr, 3)
+
+#    for idx in range(len(images_and_labels)):
+#        print("label: ", labels_arr[idx])
+#        img = tf.keras.utils.array_to_img(images_arr[idx])
+#        img.show(labels_arr[idx])
+#        time.sleep(4)
+
+    col_data = tf.data.Dataset.from_tensor_slices((images_arr, labels_arr))
+    col_data = col_data.batch(batch_size)
+#    return col_data.prefetch(len(images_arr))
+    return col_data
+
+
+#
+# def load_images_from_directory(normal_dir, pneumonia_dir, target_size, color_mode):
+# #    images = []
+# #    labels = []
+#
+#     # TODO: remove it
+#     counter = 0
+#
+#     for filename in os.listdir(normal_dir):
+#         img = load_img(os.path.join(normal_dir, filename), target_size=target_size, color_mode=color_mode)
+#         img_array = img_to_array(img)
+#         images.append(img_array)
+#         labels.append('normal')
+#
+#         # TODO: remove it
+#         counter += 1
+#         if counter > 10:
+#             break
+#
+#     for filename in os.listdir(pneumonia_dir):
+#         if 'virus' in filename:  # adjust this as needed
+#             img = load_img(os.path.join(pneumonia_dir, filename), target_size=target_size, color_mode=color_mode)
+#             img_array = img_to_array(img)
+#             images.append(img_array)
+#             labels.append('virus')
+#         else:
+#             img = load_img(os.path.join(pneumonia_dir, filename), target_size=target_size, color_mode=color_mode)
+#             img_array = img_to_array(img)
+#             images.append(img_array)
+#             labels.append('bacteria')
+#
+#         # TODO: remove it
+#         counter += 1
+#         if counter > 20:
+#             break
+#     dataset = tf.data.Dataset.from_tensor_slices((images, labels))
+#     dataset = dataset.batch(batch_size)
+#     return dataset
 
 
 normal_dir_path= path.join(base_dir, "train", "NORMAL")
@@ -114,6 +163,7 @@ normal_dir_path = path.join(base_dir, "test", "NORMAL")
 pneumonia_dir_path = path.join(base_dir, "test", "PNEUMONIA")
 test_ds = load_images_from_directory(normal_dir_path, pneumonia_dir_path, (img_height, img_width), 'grayscale')
 
+print("after load images")
 # TODO: remove it
 # train_ds = image_dataset_from_directory(
 #    directory=path.join(base_dir, "train/"),
@@ -148,10 +198,10 @@ test_ds = load_images_from_directory(normal_dir_path, pneumonia_dir_path, (img_h
 # print('Number of total samples: ', len(train_ds) * batch_size)
 # sys.exit(0)
 
-for images, labels in train_ds.take(1):
-    for image in images:
-        show_img(image)
-        break
+#for images, labels in train_ds.take(1):
+#    for image in images:
+#        show_img(image)
+#        break
 
 
 # ---------------------------------------------------------------------
@@ -190,7 +240,14 @@ model.add(Dense(units=128, activation='relu'))
 model.add(Dense(units=3, activation='softmax'))  # Use 'softmax' for more than 2 classes
 
 # Compile the model
-model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+model.compile(optimizer='adam', loss='categorical_crossentropy',
+              metrics=[
+                  'categorical_accuracy',
+                  Recall(),
+                  Precision(),
+                  F1Score(average="micro", threshold=0.5)
+              ]
+)
 
 # add early stopping
 early_stopping = EarlyStopping(
@@ -199,8 +256,16 @@ early_stopping = EarlyStopping(
 
 model.fit(train_ds, epochs=max_epochs, validation_data=validation_ds, callbacks=[early_stopping])
 
-loss, accuracy = model.evaluate(test_ds)
-print(f"Test accuracy: {accuracy * 100:.2f}%")
+results = model.evaluate(test_ds)
+
+print("---------------------------------------------------")
+print("Test results: ")
+print(f"Loss: {results[0]}")
+print(f"Accuracy: {results[1]*100:.2f}%")
+print(f"Recall: {results[2]*100:.2f}%")
+print(f"Precision: {results[3]*100:.2f}%")
+print(f"F1 score: {results[4]*100:.2f}%")
+
 
 # save the model
 model.save('my_model2.keras')
