@@ -1,12 +1,11 @@
 from os import path
 from keras.models import Sequential
 from keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Normalization
-from keras.preprocessing import image_dataset_from_directory
 from keras.callbacks import EarlyStopping
 from keras.metrics import Recall, Precision, F1Score
 from matplotlib import pyplot as plt
 import numpy as np
-import tensorflow as tf
+from utils import load_data
 
 
 # ---------------------------------------------------------------------
@@ -20,7 +19,7 @@ def show_img(image):
     plt.show()
 '''
 # how to use:
-for images, labels in train_ds:
+for images, labels in train_set:
     show_img(images[0])
     break
 '''    
@@ -35,20 +34,15 @@ def show_histogram(image):
     plt.show()
 '''
 # how to use:
-for images, labels in train_ds.take(1):
+for images, labels in train_set.take(1):
     normalized_image = normalization_layer(images[0][tf.newaxis, ...])
     show_histogram(normalized_image)
     break
 '''
 
-# ---------------------------------------------------------------------
-
-
-
 
 base_dir = "/Users/neriya.shulman/content/chest_xray"
 
-        
 batch_size = 256
 img_height = 128
 img_width = 128
@@ -57,57 +51,34 @@ max_epochs = 100
 print("Image size: ", img_height, "x", img_width)
 print("Batch size: ", batch_size)
 
-train_ds = image_dataset_from_directory(
-    directory=path.join(base_dir, "train/"),
-    # validation_split=0.2,
-    # subset="training",
-    seed=123,
-    label_mode='binary',  # 'categorical' for multiclasses
-    color_mode='grayscale',
-    image_size=(img_height, img_width),
-    batch_size=batch_size,
-    shuffle=True)
+all_labels = ['NORMAL', 'PNEUMONIA']
+train_path = path.join(base_dir, "train/")
+train_set, train_labels = load_data(train_path, img_height, img_width, all_labels, shuffle=True)
 
-validation_ds = image_dataset_from_directory(
-    directory=path.join(base_dir, "val/"),
-    # validation_split=0.2,
-    # subset="validation",
-    seed=123,
-    label_mode='binary',  # or 'categorical'
-    color_mode='grayscale',
-    image_size=(img_height, img_width),
-    batch_size=batch_size)
+val_path = path.join(base_dir, "val/")
+validation_set, validation_labels = load_data(val_path, img_height, img_width, all_labels)
 
-test_ds = image_dataset_from_directory(
-    directory=path.join(base_dir, "test/"),
-    label_mode='binary',  # or 'categorical'
-    color_mode='grayscale',
-    image_size=(img_height, img_width),
-    batch_size=batch_size)
+test_path = path.join(base_dir, "test/")
+test_set, test_labels = load_data(test_path, img_height, img_width, all_labels)
 
-print('Number of classes: ', len(train_ds.class_names))
-print('Number of training samples: ', train_ds.cardinality().numpy())
-print('Number of total samples: ', len(train_ds) * batch_size)
+print('Number of classes: ', len(all_labels))
+print('Number of training samples: ', len(train_set//batch_size))
+print('Number of total samples: ', len(train_set))
 
 # ---------------------------------------------------------------------
 '''
 Normalization layer
 '''
-
-# Create the normalization layer
-normalization_layer = Normalization()
-
-# Adapt the normalization layer with your dataset
-# Use the map function to extract just the image data if your dataset also contains labels
-normalization_layer.adapt(train_ds.map(lambda x, _: x))
+# TODO check if needed or delete it: 
+# norm_layer = Normalization(axis=None)
+# norm_layer.adapt(train_set)
 # ---------------------------------------------------------------------
 
 
 # Build the CNN Model
 
 model = Sequential()
-
-model.add(normalization_layer)
+# model.add(norm_layer)
 
 
 # Convolution layer
@@ -130,13 +101,12 @@ model.add(Dense(units=1, activation='sigmoid'))  # Use 'softmax' for more than 2
 model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy', Recall(), Precision(), F1Score(threshold=0.5)])
 
 # add early stopping
-early_stopping = EarlyStopping(
-    monitor='val_loss', patience=3, verbose=1, mode='min'
-)
+early_stopping = EarlyStopping(monitor='val_loss', patience=3, verbose=1, restore_best_weights=True)
 
-model.fit(train_ds, epochs=max_epochs, validation_data=validation_ds, callbacks=[early_stopping])
+model.fit(train_set, train_labels, epochs=max_epochs, batch_size=batch_size, 
+          validation_data=(validation_set, validation_labels), callbacks=[early_stopping])
 
-results = model.evaluate(test_ds)
+results = model.evaluate(test_set, test_labels, batch_size=batch_size)
 
 print("---------------------------------------------------")
 print("Test results: ")
