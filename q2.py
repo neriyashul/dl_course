@@ -42,6 +42,29 @@ embed_vectors = model.predict(test_set)
 
 test_labels = test_labels.squeeze()
 
+# ---------------------------------------------------------------------
+'''
+Calculate nearest neighbors for every image in the test set, 
+predict the class of the image and print the accuracy of the model 
+compared to the true label.
+'''
+
+train_embed_vectors = model.predict(train_set)
+
+knn = NearestNeighbors(n_neighbors=5)
+knn.fit(train_embed_vectors)
+
+correct = 0
+embed_vectors = model.predict(test_set)
+distances, indices = knn.kneighbors(embed_vectors)
+
+sum_of_neighbors = np.sum(train_labels[indices].squeeze(), axis=1)
+predictions = np.where(sum_of_neighbors > 2.5, 1, 0)
+correct = np.sum(predictions == test_labels)
+
+print("Accuracy: ", correct / len(test_labels))
+
+
 
 # ---------------------------------------------------------------------
 '''
