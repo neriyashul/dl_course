@@ -10,6 +10,13 @@ import tensorflow as tf
 from utils import load_data
 
 
+
+if tf.config.list_physical_devices('GPU'):
+    print("Using GPU :)")
+else:
+    print("No GPU :/")
+
+
 # ---------------------------------------------------------------------
 
 
@@ -88,7 +95,7 @@ print("Rotation: ", degrees)
 model.add(RandomRotation(degrees*pi/180))
 # model.add(RandomZoom(0.1)) # TODO: does nothing
 
-# model.add(RandomBrightness(0.1)) # TODO: a way to learn abot the model - reduce the Accuracy to: 62.50%
+# model.add(RandomBrightness(0.01)) # TODO: a way to learn abot the model - reduce the Accuracy to: 62.50%
 
 
 
@@ -99,7 +106,7 @@ model.add(MaxPooling2D(pool_size=(2, 2)))
 model.add(Conv2D(256, (3, 3), activation='relu'))
 model.add(Dropout(0.5))
 
-model.add(Flatten())
+model.add(Flatten(name='flatten'))
 
 # Full connection
 # model.add(Dense(units=300, activation='relu'))
