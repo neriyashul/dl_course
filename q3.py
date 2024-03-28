@@ -27,7 +27,9 @@ def load_images(directory):
         img = Image.open(os.path.join(directory, filename)).convert('L')  # Open image in grayscale mode
         img = img.resize((pic_width, pic_height))  # Resize images if needed
         images.append(np.array(img))
-    return np.array(images).astype('float32') / 255.0
+    np_arr = np.array(images).astype('float32')
+    np_arr /= 255.0
+    return  np_arr
 
 
 class AutoEncoder(Model):
@@ -90,7 +92,8 @@ history = autoencoder.fit(training_normal_images, training_normal_images,
                 epochs=40,
                 batch_size=128,
                 shuffle=True,
-                validation_data=(training_normal_images+training_pneumonia_images, training_normal_images+training_pneumonia_images))
+#                validation_data=(training_normal_images+training_pneumonia_images, training_normal_images+training_pneumonia_images))
+                validation_data=(training_normal_images, training_normal_images))
 save(autoencoder)
 
 # print(history.history)
