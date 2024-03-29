@@ -104,9 +104,7 @@ print("Crop percent: ", crop_percent)
 
 model = Sequential()
 model.add(norm_layer) # TODO: remove this
-
 model.add(Cropping2D(cropping=(height_crop, width_crop), input_shape=(img_height, img_width, 1))),
-
 
 # add rabdom rotation of 10 degrees clockwise or counterclockwise
 degrees = 20
@@ -115,6 +113,7 @@ model.add(RandomRotation(degrees*pi/180))
 # model.add(BatchNormalization())
 
 
+# option 1:
 model.add(Conv2D(32, (3, 3), activation='relu'))
 model.add(MaxPooling2D(pool_size=(2, 2)))
 model.add(Conv2D(64, (3, 3), activation='relu'))
@@ -124,18 +123,57 @@ model.add(Dense(units=128, activation='relu'))
 model.add(Dropout(0.5))
 model.add(Dense(units=1, activation='sigmoid'))
 
+# # option 2:
+# model.add(Conv2D(32, (3, 3), activation='relu', padding='same'))
+# model.add(MaxPooling2D(pool_size=(2, 2)))
+# model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
+# model.add(MaxPooling2D(pool_size=(2, 2)))
+# model.add(Conv2D(128, (3, 3), activation='relu', padding='same'))
+# model.add(MaxPooling2D(pool_size=(2, 2)))
+# model.add(Dropout(0.5))
+# model.add(Conv2D(256, (3, 3), activation='relu', padding='same'))
+# model.add(Flatten(name='flatten'))
+# model.add(Dense(units=516, activation='relu'))
+# model.add(Dense(units=256, activation='relu'))
+# model.add(Dense(units=128, activation='relu'))
+# model.add(Dropout(0.5))
+# model.add(Dense(units=1, activation='sigmoid'))
+
+
+
+# # option 3:
+# model.add(Conv2D(32, (3, 3), activation='relu', padding='same'))
+# model.add(MaxPooling2D(pool_size=(2, 2)))
+# model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
+# model.add(MaxPooling2D(pool_size=(2, 2)))
+# model.add(Conv2D(128, (3, 3), activation='relu', padding='same'))
+# model.add(MaxPooling2D(pool_size=(2, 2)))
+# model.add(Dropout(0.25))
+# model.add(Conv2D(256, (3, 3), activation='relu', padding='same'))
+# model.add(Conv2D(516, (3, 3), activation='relu', padding='same'))
+# model.add(Flatten(name='flatten'))
+# model.add(Dense(units=1024, activation='relu'))
+# model.add(Dense(units=526, activation='relu'))
+# model.add(Dropout(0.25))
+# model.add(Dense(units=256, activation='relu'))
+# model.add(Dense(units=128, activation='relu'))
+# model.add(Dropout(0.5))
+# model.add(Dense(units=1, activation='sigmoid'))
+
 
 # learning_rate=0.01 # TODO too large learning rate
-learning_rate = 0.0008
-optimizer = Adam(learning_rate=learning_rate)
-print("learning rate", learning_rate)
+
+
+# TODO: delete it 
+# gamma = 2
+# loss = BinaryFocalCrossentropy(alpha=0.25, gamma=gamma)
 
 # Compile the model
 model.compile(optimizer="adam", loss='binary_crossentropy', metrics=['accuracy', Recall(), Precision()])
 
 # add early stopping
 # add early stopping
-early_stopping = EarlyStopping(monitor='val_loss', patience=5, verbose=1)
+early_stopping = EarlyStopping(monitor='val_loss', patience=3, verbose=1)
 
 
 model.fit(train_set, train_labels, epochs=max_epochs, batch_size=batch_size, 
