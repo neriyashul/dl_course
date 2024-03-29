@@ -113,7 +113,7 @@ model.add(RandomRotation(degrees*pi/180))
 # model.add(BatchNormalization())
 
 
-# option 1:
+# option 1 (89.9%):
 model.add(Conv2D(32, (3, 3), activation='relu'))
 model.add(MaxPooling2D(pool_size=(2, 2)))
 model.add(Conv2D(64, (3, 3), activation='relu'))
@@ -123,7 +123,9 @@ model.add(Dense(units=128, activation='relu'))
 model.add(Dropout(0.5))
 model.add(Dense(units=1, activation='sigmoid'))
 
-# # option 2:
+# # option 2 (89%):
+# img_height = 200
+# img_width = 200
 # model.add(Conv2D(32, (3, 3), activation='relu', padding='same'))
 # model.add(MaxPooling2D(pool_size=(2, 2)))
 # model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
@@ -141,7 +143,7 @@ model.add(Dense(units=1, activation='sigmoid'))
 
 
 
-# # option 3:
+# # option 3 (90.54%):
 # model.add(Conv2D(32, (3, 3), activation='relu', padding='same'))
 # model.add(MaxPooling2D(pool_size=(2, 2)))
 # model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
@@ -150,6 +152,7 @@ model.add(Dense(units=1, activation='sigmoid'))
 # model.add(MaxPooling2D(pool_size=(2, 2)))
 # model.add(Dropout(0.25))
 # model.add(Conv2D(256, (3, 3), activation='relu', padding='same'))
+# model.add(MaxPooling2D(pool_size=(2, 2)))
 # model.add(Conv2D(516, (3, 3), activation='relu', padding='same'))
 # model.add(Flatten(name='flatten'))
 # model.add(Dense(units=1024, activation='relu'))
