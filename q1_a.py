@@ -1,13 +1,22 @@
 from math import pi
 from os import path
 from keras.models import Sequential
-from keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Normalization, RandomRotation, Dropout, RandomZoom
+from keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Normalization, RandomRotation, Dropout, RandomZoom, Cropping2D, BatchNormalization, RandomContrast
 from keras.callbacks import EarlyStopping
 from keras.metrics import Recall, Precision, F1Score
 from matplotlib import pyplot as plt
 import numpy as np
 import tensorflow as tf
 from utils import load_data
+from keras.optimizers import Adam
+import numpy as np
+import random
+import tensorflow as tf
+
+# Set seeds
+np.random.seed(42)
+random.seed(42)
+tf.random.set_seed(42)
 
 
 
@@ -52,13 +61,16 @@ for images, labels in train_set.take(1):
 
 base_dir = "/Users/neriya.shulman/content/chest_xray"
 
+# TODO: change it to 64x64
+
 batch_size = 64
-img_height = 32
-img_width = 32
+img_height = 150
+img_width = 150
 max_epochs = 100
 
 print("Image size: ", img_height, "x", img_width)
 print("Batch size: ", batch_size)
+
 
 all_labels = ['NORMAL', 'PNEUMONIA']
 train_path = path.join(base_dir, "train/")
@@ -83,38 +95,35 @@ norm_layer = Normalization(axis=None)
 norm_layer.adapt(train_set)
 # ---------------------------------------------------------------------
 
+crop_percent = 3
+height_crop = int(img_height * crop_percent / 100)
+width_crop = int(img_width * crop_percent / 100)
+print("Crop percent: ", crop_percent)
 
 # Build the CNN Model
 
 model = Sequential()
-model.add(norm_layer)
+model.add(norm_layer) # TODO: remove this
+
+model.add(Cropping2D(cropping=(height_crop, width_crop), input_shape=(img_height, img_width, 1))),
+
 
 # add rabdom rotation of 10 degrees clockwise or counterclockwise
-degrees = 30
+degrees = 20
 print("Rotation: ", degrees)
 model.add(RandomRotation(degrees*pi/180))
-# model.add(RandomZoom(0.1)) # TODO: does nothing
-
-# model.add(RandomBrightness(0.01)) # TODO: a way to learn abot the model - reduce the Accuracy to: 62.50%
+# model.add(BatchNormalization())
 
 
-
-model.add(Conv2D(64, (3, 3), activation='relu', input_shape=(img_height, img_width, 1)))
+model.add(Conv2D(32, (3, 3), activation='relu'))
 model.add(MaxPooling2D(pool_size=(2, 2)))
-model.add(Conv2D(128, (3, 3), activation='relu'))
+model.add(Conv2D(64, (3, 3), activation='relu'))
 model.add(MaxPooling2D(pool_size=(2, 2)))
-model.add(Conv2D(256, (3, 3), activation='relu'))
-model.add(Dropout(0.5))
-
 model.add(Flatten(name='flatten'))
-
-# Full connection
-# model.add(Dense(units=300, activation='relu'))
 model.add(Dense(units=128, activation='relu'))
 model.add(Dropout(0.5))
-model.add(Dense(units=1, activation='sigmoid'))  # Use 'softmax' for more than 2 classes
+model.add(Dense(units=1, activation='sigmoid'))
 
-from keras.optimizers import Adam
 
 # learning_rate=0.01 # TODO too large learning rate
 learning_rate = 0.0008
@@ -122,17 +131,17 @@ optimizer = Adam(learning_rate=learning_rate)
 print("learning rate", learning_rate)
 
 # Compile the model
-model.compile(optimizer=optimizer, loss='binary_crossentropy', metrics=['accuracy', Recall(), Precision(), F1Score(threshold=0.5)])
+model.compile(optimizer="adam", loss='binary_crossentropy', metrics=['accuracy', Recall(), Precision()])
 
 # add early stopping
 # add early stopping
 early_stopping = EarlyStopping(monitor='val_loss', patience=5, verbose=1)
 
-print(model.summary())
 
 model.fit(train_set, train_labels, epochs=max_epochs, batch_size=batch_size, 
           validation_data=(validation_set, validation_labels), callbacks=[early_stopping])
 
+print(model.summary())
 results = model.evaluate(test_set, test_labels, batch_size=batch_size)
 
 
@@ -143,7 +152,6 @@ print(f"Loss: {results[0]}")
 print(f"Accuracy: {results[1]*100:.2f}%")
 print(f"Recall: {results[2]*100:.2f}%")
 print(f"Precision: {results[3]*100:.2f}%")
-print(f"F1 score: {results[4]*100:.2f}%")
 
 
 
