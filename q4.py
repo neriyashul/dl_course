@@ -127,6 +127,57 @@ def display_second_layer_outputs_of_pneumonia_img(model) -> None:
     display_layer_outputs_of_image(model, img_path, 'conv2d_1')
 
 
+# def generate_heat_map(model, img_path: str) -> None:
+#     img = load_img(img_path, target_size=(250, 250)).convert('L')
+#     img_tensor = img_to_array(img)
+#     img_tensor = np.expand_dims(img_tensor, axis=0)
+#     img_tensor /= 255.
+#
+#     conv_output = model.get_layer("conv2d_1").output
+#     pred_output = model.get_layer("dense_3").output
+#     model2 = Model(inputs=model.inputs[0], outputs=[conv_output, pred_output])
+#     conv, pred = model2.predict(img_tensor)
+#
+#     plt.figure(figsize=(16, 16))
+#     for i in range(36):
+#         plt.subplot(6, 6, i + 1)
+#         plt.imshow(conv[0, :,:,i]*255., cmap='jet')
+#     plt.show()
+#
+#     plt.figure(figsize=(16, 16))
+#     for i in range(36):
+#         plt.subplot(6, 6, i + 1)
+#         plt.imshow(img.resize(conv[0,:,:,0].shape), cmap='gray')     # Resize original image to be same as the result filters.
+#         plt.imshow(conv[0, :,:,i]*255., cmap='jet', alpha=0.6)
+#     plt.show()
+#
+#     target = np.argmax(pred, axis=0).squeeze()
+#     w, b = model2.get_layer("dense_3").weights
+#     weights = w[:, target].numpy()
+#     conv_sq = conv.squeeze()
+#     heatmap1 = np.dot(conv_sq[:,:,:int(conv_sq.shape[2]/2)], weights)
+#     heatmap2 = np.dot(conv_sq[:,:,int(conv_sq.shape[2]/2):], weights)
+#
+#     plt.figure(figsize=(12, 12))
+#     plt.imshow(img.resize(heatmap1.shape), cmap='gray')
+#     plt.imshow(heatmap1, cmap='jet', alpha=0.5)
+#     plt.show()
+#
+#     plt.figure(figsize=(12, 12))
+#     plt.imshow(img.resize(heatmap1.shape), cmap='gray')
+#     plt.imshow(heatmap2, cmap='jet', alpha=0.5)
+#     plt.show()
+#
+#
+# def generate_heat_map_for_normal(model) -> None:
+#     img_path = "C:\\Users\\Raviv\\PycharmProjects\\dl_course\\chest_xray\\test\\NORMAL\\IM-0001-0001.jpeg"
+#     generate_heat_map(model, img_path)
+#
+#
+# def generate_heat_map_for_pneumonia(model) -> None:
+#     img_path = "C:\\Users\\Raviv\\PycharmProjects\\dl_course\\chest_xray\\test\\PNEUMONIA\\person1_virus_6.jpeg"
+#     generate_heat_map(model, img_path)
+
 def main(include_prints: bool = False) -> None:
     q1_a_model = load_q1_a_model()
 
@@ -142,6 +193,10 @@ def main(include_prints: bool = False) -> None:
     display_first_layer_outputs_of_pneumonia_img(q1_a_model)
     display_second_layer_outputs_of_normal_img(q1_a_model)
     display_second_layer_outputs_of_pneumonia_img(q1_a_model)
+
+    # # Not working well. if can't improve it - delete it.
+    # generate_heat_map_for_normal(q1_a_model)
+    # generate_heat_map_for_pneumonia(q1_a_model)
 
 
 if __name__ == "__main__":
