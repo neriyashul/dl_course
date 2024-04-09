@@ -5,7 +5,7 @@ import shutil
 from matplotlib import pyplot as plt
 import numpy as np
 import tensorflow as tf
-from keras.preprocessing.image import load_img
+from keras.preprocessing.image import load_img, img_to_array
 from keras.utils import to_categorical
 
 
@@ -29,7 +29,7 @@ def load_data_from_path(base_dir, img_height, img_width, file_labels=[]):
             dataset.extend(dir_images)
             labels.extend(dir_labels)
         else:
-            img = load_img(file.path, target_size=img_size, color_mode='grayscale')
+            img = img_to_array(load_img(file.path, target_size=img_size, color_mode='grayscale'))
             dataset.append(img)
             labels.append(get_label(dir_names, file.name, file_labels))
     dataset = np.array(dataset, dtype='float32')
