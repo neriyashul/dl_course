@@ -77,9 +77,7 @@ def display_seconds_layer_filters(filters_list: list) -> None:
     plt.show()
 
 
-def display_layer_outputs_of_image(model, img_path: str, layer_name: str = 'conv2d_1') -> None:
-    width_size = 8
-    height_size = 8
+def display_layer_outputs_of_image(model, img_path: str, layer_name: str) -> None:
     layer_outputs = [layer.output for layer in model.layers if layer.name == layer_name]
     activation_model = Model(inputs=model.inputs[0], outputs=layer_outputs)
 
@@ -89,42 +87,63 @@ def display_layer_outputs_of_image(model, img_path: str, layer_name: str = 'conv
     img_tensor /= 255.
 
     activations = activation_model.predict(img_tensor)
-    first_layer_activation = activations[0]
+    layer_activation = activations[0]
 
-    fig, ax = plt.subplots(height_size, width_size, figsize=(24, 24))
+    width_size = 8
+    height_size = int(layer_activation.shape[2] / width_size)
+
+    fig, ax = plt.subplots(height_size, width_size, figsize=(width_size*3, height_size*3))
     fig.suptitle(f"Display output of layer {layer_name}")
     for height_idx in range(height_size):
         for width_idx in range(width_size):
-            ax[height_idx, width_idx].imshow(first_layer_activation[:, :, height_idx*8+width_idx]*255., cmap='gray')
+            ax[height_idx, width_idx].imshow(layer_activation[:, :, height_idx*width_size+width_idx]*255., cmap='gray')
             ax[height_idx, width_idx].axis('off')
     plt.show()
 
 
-def display_layer_outputs_of_normal_img(model):
+def display_first_layer_outputs_of_normal_img(model):
     base_tested_dir = join(base_dir, join("test", "NORMAL"))
     tested_image_name = "IM-0001-0001.jpeg"
     img_path = join(base_tested_dir, tested_image_name)
-    display_layer_outputs_of_image(model, img_path)
+    display_layer_outputs_of_image(model, img_path, 'conv2d')
 
 
-def display_layer_outputs_of_pneumonia_img(model):
+def display_first_layer_outputs_of_pneumonia_img(model):
     base_tested_dir = join(base_dir, join("test", "PNEUMONIA"))
     tested_image_name = "person1_virus_6.jpeg"
     img_path = join(base_tested_dir, tested_image_name)
-    display_layer_outputs_of_image(model, img_path)
+    display_layer_outputs_of_image(model, img_path, 'conv2d')
+
+
+def display_second_layer_outputs_of_normal_img(model):
+    base_tested_dir = join(base_dir, join("test", "NORMAL"))
+    tested_image_name = "IM-0001-0001.jpeg"
+    img_path = join(base_tested_dir, tested_image_name)
+    display_layer_outputs_of_image(model, img_path, 'conv2d_1')
+
+
+def display_second_layer_outputs_of_pneumonia_img(model):
+    base_tested_dir = join(base_dir, join("test", "PNEUMONIA"))
+    tested_image_name = "person1_virus_6.jpeg"
+    img_path = join(base_tested_dir, tested_image_name)
+    display_layer_outputs_of_image(model, img_path, 'conv2d_1')
 
 
 def main(include_prints: bool = False):
     q1_a_model = load_q1_a_model()
+
     if include_prints:
         print_models_layers(q1_a_model)
         print_specific_layer_in_model_with_relevant_name(q1_a_model, "conv2d")
         print_specific_layer_in_model_with_relevant_name(q1_a_model, "dense")
         print_all_layers_with_weights(q1_a_model)
+
     display_first_layer_filters(get_layer_filters(q1_a_model, "conv2d", include_prints))
     display_seconds_layer_filters(get_layer_filters(q1_a_model, "conv2d_1", include_prints))
-    display_layer_outputs_of_normal_img(q1_a_model)
-    display_layer_outputs_of_pneumonia_img(q1_a_model)
+    display_first_layer_outputs_of_normal_img(q1_a_model)
+    display_first_layer_outputs_of_pneumonia_img(q1_a_model)
+    display_second_layer_outputs_of_normal_img(q1_a_model)
+    display_second_layer_outputs_of_pneumonia_img(q1_a_model)
 
 
 if __name__ == "__main__":
