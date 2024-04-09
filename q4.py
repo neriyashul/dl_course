@@ -31,24 +31,22 @@ def print_all_layers_with_weights(model) -> None:
         if model.layers[idx].get_weights():
             print("layer: ", idx, model.layers[idx].name)
             print("filter weights: ", model.layers[idx].get_weights()[0].shape)
-            print("output weights: ", model.layers[idx].get_weights()[1].shape)
+            print("biases weights: ", model.layers[idx].get_weights()[1].shape)
             print()
 
 
 def get_layer_filters(model, layer_name: str, include_prints) -> list:
     lst = []
-    for idx, layer in enumerate(model.layers):
-        if layer_name == model.layers[idx].name:
-            if include_prints:
-                print("layer: ", idx, model.layers[idx].name)
-                print("filter weights: ", model.layers[idx].get_weights()[0].shape)
-                print("output weights: ", model.layers[idx].get_weights()[1].shape)
-                print()
-            for idx2 in range(model.layers[idx].get_weights()[0].shape[3]):
-                x = model.layers[idx].get_weights()[0][:, :, :, idx2]
-                lst.append(x)
-
-            break
+    specific_layer = model.get_layer(layer_name)
+    filters, biases = specific_layer.get_weights()
+    if include_prints:
+        print("layer: ", specific_layer.name)
+        print("filter weights: ", filters.shape)
+        print("output weights: ", biases.shape)
+        print()
+    for idx2 in range(filters.shape[3]):
+        x = filters[:, :, :, idx2]
+        lst.append(x)
     return lst
 
 
@@ -78,7 +76,7 @@ def display_seconds_layer_filters(filters_list: list) -> None:
 
 
 def display_layer_outputs_of_image(model, img_path: str, layer_name: str) -> None:
-    layer_outputs = [layer.output for layer in model.layers if layer.name == layer_name]
+    layer_outputs = model.get_layer(layer_name).output
     activation_model = Model(inputs=model.inputs[0], outputs=layer_outputs)
 
     img = load_img(img_path, target_size=(250, 250)).convert('L')
@@ -101,35 +99,35 @@ def display_layer_outputs_of_image(model, img_path: str, layer_name: str) -> Non
     plt.show()
 
 
-def display_first_layer_outputs_of_normal_img(model):
+def display_first_layer_outputs_of_normal_img(model) -> None:
     base_tested_dir = join(base_dir, join("test", "NORMAL"))
     tested_image_name = "IM-0001-0001.jpeg"
     img_path = join(base_tested_dir, tested_image_name)
     display_layer_outputs_of_image(model, img_path, 'conv2d')
 
 
-def display_first_layer_outputs_of_pneumonia_img(model):
+def display_first_layer_outputs_of_pneumonia_img(model) -> None:
     base_tested_dir = join(base_dir, join("test", "PNEUMONIA"))
     tested_image_name = "person1_virus_6.jpeg"
     img_path = join(base_tested_dir, tested_image_name)
     display_layer_outputs_of_image(model, img_path, 'conv2d')
 
 
-def display_second_layer_outputs_of_normal_img(model):
+def display_second_layer_outputs_of_normal_img(model) -> None:
     base_tested_dir = join(base_dir, join("test", "NORMAL"))
     tested_image_name = "IM-0001-0001.jpeg"
     img_path = join(base_tested_dir, tested_image_name)
     display_layer_outputs_of_image(model, img_path, 'conv2d_1')
 
 
-def display_second_layer_outputs_of_pneumonia_img(model):
+def display_second_layer_outputs_of_pneumonia_img(model) -> None:
     base_tested_dir = join(base_dir, join("test", "PNEUMONIA"))
     tested_image_name = "person1_virus_6.jpeg"
     img_path = join(base_tested_dir, tested_image_name)
     display_layer_outputs_of_image(model, img_path, 'conv2d_1')
 
 
-def main(include_prints: bool = False):
+def main(include_prints: bool = False) -> None:
     q1_a_model = load_q1_a_model()
 
     if include_prints:
