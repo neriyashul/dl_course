@@ -41,15 +41,16 @@ def shuffle_dataset(dataset, labels):
     np.random.shuffle(indices)
     return dataset[indices], labels[indices]
 
-def load_data(path, img_height, img_width, all_labels, shuffle=False, file_labels=[]):
+def load_data(path, img_height, img_width, all_labels, file_labels=[]):
     dataset, labels = load_data_from_path(path, img_height, img_width, file_labels)
     # TODO: check if needed or delete it: 
     dataset /= 255 # rescale to be between 0 and 1
     labels = np.array([all_labels.index(label) for label in labels]) # one-hot encoding
     if len(all_labels) > 2:
         labels = to_categorical(labels, len(all_labels))
+    else:
+        labels = np.expand_dims(labels, -1)
     dataset = np.expand_dims(dataset, -1) # image should be (height, width, channels)
-    labels = np.expand_dims(labels, -1)
     return dataset, labels
 # ---------------------------------------------------------------------
 
