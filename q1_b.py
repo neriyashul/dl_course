@@ -1,140 +1,120 @@
-
 import os
+import keras
 import random
-import time
-from keras.models import Sequential
-from keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Normalization
-from keras.callbacks import EarlyStopping
-from keras.metrics import Recall, Precision, F1Score
+import numpy as np
 import tensorflow as tf
-from keras.preprocessing.image import load_img, img_to_array
+from os import path
+from keras import layers
+from keras.optimizers import Adam
+from keras.layers import Dense, RandomBrightness, RandomRotation, RandomZoom, RandomContrast
+from keras.callbacks import EarlyStopping
+from utils import load_data, add_samples_to_validation, shuffle_dataset
 
+# Set seeds
+np.random.seed(42)
+random.seed(42)
+tf.random.set_seed(42)
 
-base_dir = "/Users/neriya.shulman/content/chest_xray"
+base_dir = os.path.join(os.getcwd(), "chest_xray")
+# base_dir = "/Users/neriya.shulman/content/chest_xray"
 
-batch_size = 256
-img_height = 128
-img_width = 128
-max_epochs = 100
+img_height = 150
+img_width = 150
+max_epochs = 50
+batch_size = 64
+learning_rate=0.001
 
 print("Image size: ", img_height, "x", img_width)
 print("Batch size: ", batch_size)
 
 
-def load_images_from_directory(normal_dir, pneumonia_dir, target_size, color_mode):
-    catalog = {"BACTERIA":[], "VIRUS":[], "NORMAL":[] }
-#    print(os.listdir(pneumonia_dir))
-    for curr_file in os.listdir(pneumonia_dir):
-        img = load_img(os.path.join(pneumonia_dir, curr_file), target_size=target_size, color_mode=color_mode)
-        #img_data = tf.keras.utils.img_to_array(img)
-        img_data = img_to_array(img)
-        if "virus" in curr_file:
-            catalog["VIRUS"].append(img_data)
-        else:
-            catalog["BACTERIA"].append(img_data)
-
-    for curr_file in os.listdir(normal_dir):
-        img = load_img(os.path.join(normal_dir, curr_file), target_size=target_size, color_mode=color_mode)
-        #img_data = tf.keras.utils.img_to_array(img)
-        img_data = img_to_array(img)
-        catalog["NORMAL"].append(img_data)
-
-    images_and_labels = []
-    for element in catalog["BACTERIA"]:
-        images_and_labels.append([element, 1])
-    for element in catalog["VIRUS"]:
-        images_and_labels.append([element, 2])
-    for element in catalog["NORMAL"]:
-        images_and_labels.append([element, 0])
-
-    random.shuffle(images_and_labels)
-    images_arr = [x for [x, y] in images_and_labels]
-    labels_arr = [y for [x, y] in images_and_labels]
-
-    from keras.utils import to_categorical
-    labels_arr = to_categorical(labels_arr, 3)
-
-#    for idx in range(len(images_and_labels)):
-#        print("label: ", labels_arr[idx])
-#        img = tf.keras.utils.array_to_img(images_arr[idx])
-#        img.show(labels_arr[idx])
-#        time.sleep(4)
-
-    col_data = tf.data.Dataset.from_tensor_slices((images_arr, labels_arr))
-    col_data = col_data.batch(batch_size)
-    return col_data
+def balance_data(normal_data, pneum_data):
+    multiply_by = round(len(pneum_data) / len(normal_data))
+    return np.concatenate([normal_data for _ in range(multiply_by)], axis=0)
 
 
-normal_dir_path= os.path.join(base_dir, "train", "NORMAL")
-pneumonia_dir_path = os.path.join(base_dir, "train", "PNEUMONIA")
-train_ds = load_images_from_directory(normal_dir_path, pneumonia_dir_path, (img_height, img_width), 'grayscale')
+def get_balanced_data(base_dir, file_labels=[]):
+    print('get_balanced_data')
+    normal_train_set, normal_train_labels = load_data(path.join(base_dir, "NORMAL"), img_height, img_width, all_labels)
+    pneum_train_set, pneum_train_labels = load_data(path.join(base_dir, "PNEUMONIA"), img_height, img_width, all_labels, file_labels=file_labels)
+    normal_train_set = balance_data(normal_train_set, pneum_train_set)
+    normal_train_labels = balance_data(normal_train_labels, pneum_train_labels)
+    
+    train_set = np.concatenate([normal_train_set, pneum_train_set], axis=0)
+    train_labels = np.concatenate([normal_train_labels, pneum_train_labels], axis=0)
+    
+    train_set, train_labels = shuffle_dataset(train_set, train_labels)
+    return train_set, train_labels
 
-normal_dir_path = os.path.join(base_dir, "val", "NORMAL")
-pneumonia_dir_path = os.path.join(base_dir, "val", "PNEUMONIA")
-validation_ds = load_images_from_directory(normal_dir_path, pneumonia_dir_path, (img_height, img_width), 'grayscale')
 
-normal_dir_path = os.path.join(base_dir, "test", "NORMAL")
-pneumonia_dir_path = os.path.join(base_dir, "test", "PNEUMONIA")
-test_ds = load_images_from_directory(normal_dir_path, pneumonia_dir_path, (img_height, img_width), 'grayscale')
+all_labels = ['NORMAL', 'bacteria', 'virus']
+train_path = os.path.join(base_dir, "train")
+train_set, train_labels = get_balanced_data(train_path, file_labels=['bacteria', 'virus'])
+
+val_path = path.join(base_dir, "val/")
+validation_set, validation_labels = load_data(val_path, img_height, img_width, all_labels, file_labels=['bacteria', 'virus'])
+if len(validation_set) < 20:
+    add_samples_to_validation(base_dir)
+
+test_path = path.join(base_dir, "test/")
+test_set, test_labels = load_data(test_path, img_height, img_width, all_labels, file_labels=['bacteria', 'virus'])
+
+print('Number of classes: ', len(all_labels))
+print('Number of training samples: ', len(train_set)//batch_size)
+print('Number of total samples: ', len(train_set))
 
 
-# ---------------------------------------------------------------------
+model = keras.Sequential(
+    [
+        keras.Input(shape=(img_height, img_width, 1)),
+        RandomRotation(0.35),
+        RandomZoom(0.1),
+        RandomBrightness(0.02, value_range=(0,1)),
+        RandomContrast(0.02),
 
-# Normalization layer - Create the normalization layer
-normalization_layer = Normalization()
-normalization_layer.adapt(train_ds.map(lambda x, _: x))
-
-# ---------------------------------------------------------------------
-
-# Build the CNN Model
-
-model = Sequential()
-
-model.add(normalization_layer)
-
-# Convolution layer
-model.add(Conv2D(32, (3, 3), activation='relu', input_shape=(img_height, img_width, 1)))
-# Pooling layer
-model.add(MaxPooling2D(pool_size=(2, 2)))
-
-# Adding a second convolutional layer
-model.add(Conv2D(64, (3, 3), activation='relu'))
-model.add(MaxPooling2D(pool_size=(2, 2)))
-
-# Flattening
-model.add(Flatten())
-
-# Full connection
-model.add(Dense(units=128, activation='relu'))
-model.add(Dense(units=3, activation='softmax'))
-
-# Compile the model
-model.compile(optimizer='adam', loss='categorical_crossentropy',
-              metrics=[
-                  'categorical_accuracy',
-                  Recall(),
-                  Precision(),
-                  F1Score(average="micro", threshold=0.5)
-              ]
+        layers.Conv2D(64, (3, 3), activation='relu', padding='same'),
+        layers.MaxPooling2D(pool_size=(2, 2)),
+        layers.Conv2D(128, (3, 3), activation='relu', padding='same'),
+        layers.MaxPooling2D(pool_size=(2, 2)),
+        layers.Conv2D(256, (3, 3), activation='relu', padding='same'),
+        layers.MaxPooling2D(pool_size=(2, 2)),
+        layers.Conv2D(516, (3, 3), activation='relu', padding='same'),
+        layers.Flatten(name='flatten'),
+        layers.Dense(units=1024, activation='relu'),
+        layers.Dense(units=526, activation='relu'),
+        layers.Dropout(0.25),
+        layers.Dense(units=256, activation='relu'),
+        layers.Dense(units=128, activation='relu'),
+        layers.Dropout(0.5),
+        layers.Dense(len(all_labels), activation='softmax'),
+    ]
 )
 
-# add early stopping
-early_stopping = EarlyStopping(
-    monitor='val_loss', patience=3, verbose=1, mode='min'
-)
+model.compile(loss="categorical_crossentropy", optimizer="adam", metrics=["accuracy", "recall", "precision"])
 
-model.fit(train_ds, epochs=max_epochs, validation_data=validation_ds, callbacks=[early_stopping])
 
-results = model.evaluate(test_ds)
+early_stopping = EarlyStopping(monitor='val_loss', patience=5, verbose=1)
 
-print("---------------------------------------------------")
-print("Test results: ")
-print(f"Loss: {results[0]}")
-print(f"Accuracy: {results[1]*100:.2f}%")
-print(f"F1 score: {results[2]*100:.2f}%")
-print(f"Precision: {results[3]*100:.2f}%")
-print(f"Recall: {results[4]*100:.2f}%")
+history = model.fit(train_set, train_labels, epochs=max_epochs, batch_size=batch_size, 
+        validation_data=(validation_set, validation_labels), callbacks=[early_stopping])
+
+print(model.summary())
+
+
+score = model.evaluate(test_set, test_labels, batch_size=batch_size)
+# results = model.evaluate(test_set, test_labels, batch_size=batch_size)
+print("Test loss:", score[0])
+print("Test accuracy:", score[1])
+print("Test recall:", score[2])
+print("Test precision:", score[3])
+
+
+
 
 # save the model
-model.save('my_model2.keras')
+model.save('model_q1_b.keras')
+
+# load the model
+# model = tf.keras.models.load_model('cnn_model.h5')
+
 
