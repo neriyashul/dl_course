@@ -48,6 +48,8 @@ def load_data(path, img_height, img_width, all_labels, file_labels=[]):
     labels = np.array([all_labels.index(label) for label in labels]) # one-hot encoding
     if len(all_labels) > 2:
         labels = to_categorical(labels, len(all_labels))
+    else:
+        labels = np.expand_dims(labels, -1)
     return dataset, labels
 # ---------------------------------------------------------------------
 
