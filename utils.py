@@ -50,7 +50,6 @@ def load_data(path, img_height, img_width, all_labels, file_labels=[]):
         labels = to_categorical(labels, len(all_labels))
     else:
         labels = np.expand_dims(labels, -1)
-    dataset = np.expand_dims(dataset, -1) # image should be (height, width, channels)
     return dataset, labels
 # ---------------------------------------------------------------------
 
