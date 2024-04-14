@@ -5,8 +5,7 @@ import numpy as np
 import tensorflow as tf
 from os import path
 from keras import layers
-from keras.optimizers import Adam
-from keras.layers import Dense, RandomBrightness, RandomRotation, RandomZoom, RandomContrast
+from keras.layers import RandomBrightness, RandomRotation, RandomZoom, RandomContrast
 from keras.callbacks import EarlyStopping
 from utils import load_data, add_samples_to_validation, shuffle_dataset
 
@@ -34,7 +33,6 @@ def balance_data(normal_data, pneum_data):
 
 
 def get_balanced_data(base_dir, file_labels=[]):
-    print('get_balanced_data')
     normal_train_set, normal_train_labels = load_data(path.join(base_dir, "NORMAL"), img_height, img_width, all_labels)
     pneum_train_set, pneum_train_labels = load_data(path.join(base_dir, "PNEUMONIA"), img_height, img_width, all_labels, file_labels=file_labels)
     normal_train_set = balance_data(normal_train_set, pneum_train_set)
@@ -60,7 +58,7 @@ test_path = path.join(base_dir, "test/")
 test_set, test_labels = load_data(test_path, img_height, img_width, all_labels, file_labels=['bacteria', 'virus'])
 
 print('Number of classes: ', len(all_labels))
-print('Number of training samples: ', len(train_set)//batch_size)
+print('Number of training batches: ', len(train_set)//batch_size)
 print('Number of total samples: ', len(train_set))
 
 
@@ -82,6 +80,7 @@ model = keras.Sequential(
         layers.MaxPooling2D(pool_size=(2, 2)),
         layers.Conv2D(1024, (3, 3), activation='relu', padding='same'),
         layers.MaxPooling2D(pool_size=(2, 2)),
+
         layers.Flatten(name='flatten'),
         layers.Dense(units=1024, activation='relu'),
         layers.Dense(units=526, activation='relu'),
@@ -103,21 +102,12 @@ history = model.fit(train_set, train_labels, epochs=max_epochs, batch_size=batch
 
 print(model.summary())
 
-
 score = model.evaluate(test_set, test_labels, batch_size=batch_size)
-# results = model.evaluate(test_set, test_labels, batch_size=batch_size)
 print("Test loss:", score[0])
 print("Test accuracy:", score[1])
 print("Test recall:", score[2])
 print("Test precision:", score[3])
 
 
-
-
 # save the model
 model.save('model_q1_b.keras')
-
-# load the model
-# model = tf.keras.models.load_model('cnn_model.h5')
-
-
