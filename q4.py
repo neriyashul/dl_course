@@ -101,28 +101,41 @@ def display_layer_outputs_of_image(model, img_path: str, layer_name: str) -> Non
 
 def display_first_layer_outputs_of_normal_img(model) -> None:
     base_tested_dir = join(base_dir, join("test", "NORMAL"))
-    tested_image_name = "IM-0001-0001.jpeg"
+    tested_image_name = "IM-0007-0001.jpeg"
     img_path = join(base_tested_dir, tested_image_name)
     display_layer_outputs_of_image(model, img_path, 'conv2d')
 
 
-def display_first_layer_outputs_of_pneumonia_img(model) -> None:
+def display_first_layer_outputs_of_virus_img(model) -> None:
     base_tested_dir = join(base_dir, join("test", "PNEUMONIA"))
-    tested_image_name = "person1_virus_6.jpeg"
+    tested_image_name = "person1_virus_11.jpeg"
     img_path = join(base_tested_dir, tested_image_name)
     display_layer_outputs_of_image(model, img_path, 'conv2d')
 
+
+def display_first_layer_outputs_of_bacteria_img(model) -> None:
+    base_tested_dir = join(base_dir, join("test", "PNEUMONIA"))
+    tested_image_name = "person91_bacteria_448.jpeg"
+    img_path = join(base_tested_dir, tested_image_name)
+    display_layer_outputs_of_image(model, img_path, 'conv2d')
 
 def display_second_layer_outputs_of_normal_img(model) -> None:
     base_tested_dir = join(base_dir, join("test", "NORMAL"))
-    tested_image_name = "IM-0001-0001.jpeg"
+    tested_image_name = "IM-0007-0001.jpeg"
     img_path = join(base_tested_dir, tested_image_name)
     display_layer_outputs_of_image(model, img_path, 'conv2d_1')
 
 
-def display_second_layer_outputs_of_pneumonia_img(model) -> None:
+def display_second_layer_outputs_of_virus_img(model) -> None:
     base_tested_dir = join(base_dir, join("test", "PNEUMONIA"))
-    tested_image_name = "person1_virus_6.jpeg"
+    tested_image_name = "person1_virus_11.jpeg"
+    img_path = join(base_tested_dir, tested_image_name)
+    display_layer_outputs_of_image(model, img_path, 'conv2d_1')
+
+
+def display_second_layer_outputs_of_bacteria_img(model) -> None:
+    base_tested_dir = join(base_dir, join("test", "PNEUMONIA"))
+    tested_image_name = "person91_bacteria_448.jpeg"
     img_path = join(base_tested_dir, tested_image_name)
     display_layer_outputs_of_image(model, img_path, 'conv2d_1')
 
@@ -190,9 +203,11 @@ def main(include_prints: bool = False) -> None:
     display_first_layer_filters(get_layer_filters(q1_a_model, "conv2d", include_prints))
     display_seconds_layer_filters(get_layer_filters(q1_a_model, "conv2d_1", include_prints))
     display_first_layer_outputs_of_normal_img(q1_a_model)
-    display_first_layer_outputs_of_pneumonia_img(q1_a_model)
+    display_first_layer_outputs_of_virus_img(q1_a_model)
+    display_first_layer_outputs_of_bacteria_img(q1_a_model)
     display_second_layer_outputs_of_normal_img(q1_a_model)
-    display_second_layer_outputs_of_pneumonia_img(q1_a_model)
+    display_second_layer_outputs_of_virus_img(q1_a_model)
+    display_second_layer_outputs_of_bacteria_img(q1_a_model)
 
     # # Not working well. if can't improve it - delete it.
     # generate_heat_map_for_normal(q1_a_model)
