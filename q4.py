@@ -1,4 +1,3 @@
-
 from keras.models import Model, load_model
 from keras.preprocessing.image import load_img, img_to_array
 import matplotlib.pyplot as plt
@@ -6,9 +5,8 @@ import numpy as np
 from os import getcwd
 from os.path import join
 
-
-#base_dir = "/Users/neriya.shulman/content/chest_xray"
-base_dir = join(getcwd(), "chest_xray")
+base_dir = "/Users/neriya.shulman/content/chest_xray"
+# base_dir = join(getcwd(), "chest_xray")
 
 
 def load_q1_a_model():
@@ -90,11 +88,12 @@ def display_layer_outputs_of_image(model, img_path: str, layer_name: str) -> Non
     width_size = 8
     height_size = int(layer_activation.shape[2] / width_size)
 
-    fig, ax = plt.subplots(height_size, width_size, figsize=(width_size*3, height_size*3))
+    fig, ax = plt.subplots(height_size, width_size, figsize=(width_size * 3, height_size * 3))
     fig.suptitle(f"Display output of layer {layer_name}")
     for height_idx in range(height_size):
         for width_idx in range(width_size):
-            ax[height_idx, width_idx].imshow(layer_activation[:, :, height_idx*width_size+width_idx]*255., cmap='gray')
+            ax[height_idx, width_idx].imshow(layer_activation[:, :, height_idx * width_size + width_idx] * 255.,
+                                             cmap='gray')
             ax[height_idx, width_idx].axis('off')
     plt.show()
 
@@ -118,6 +117,7 @@ def display_first_layer_outputs_of_bacteria_img(model) -> None:
     tested_image_name = "person91_bacteria_448.jpeg"
     img_path = join(base_tested_dir, tested_image_name)
     display_layer_outputs_of_image(model, img_path, 'conv2d')
+
 
 def display_second_layer_outputs_of_normal_img(model) -> None:
     base_tested_dir = join(base_dir, join("test", "NORMAL"))
@@ -191,6 +191,80 @@ def display_second_layer_outputs_of_bacteria_img(model) -> None:
 #     img_path = "C:\\Users\\Raviv\\PycharmProjects\\dl_course\\chest_xray\\test\\PNEUMONIA\\person1_virus_6.jpeg"
 #     generate_heat_map(model, img_path)
 
+
+from skimage.transform import resize
+def generate_heat_map(model, original_img, image_array, original_prediction, predicted_class, window_size, stride):
+    heatmaps = []
+    for y in range(0, image_array.shape[1] - window_size + 1, stride):
+        for x in range(0, image_array.shape[2] - window_size + 1, stride):
+            print(x,y)
+            # Create occluded image
+            occluded_img = np.copy(image_array)
+            occluded_img[:, y:y + window_size, x:x + window_size, :] = 0
+
+            # if show_occluded_images:
+            #     # Convert RGB image to grayscale
+            #     image_gray = np.dot(occluded_img[0][..., :3], [0.2989, 0.5870, 0.1140])
+            #
+            #     # Display the grayscale image using Matplotlib
+            #     plt.imshow(image_gray, cmap='gray')
+            #     plt.axis('off')
+            #     plt.show()
+
+            # Predict on occluded image
+            occlusion_prediction = model.predict(occluded_img)
+
+            # Calculate difference in predictions caused by occlusion
+            prediction_diff = occlusion_prediction - original_prediction
+
+            # Calculate average difference in predictions
+            avg_diff = np.mean(np.abs(prediction_diff))
+
+            # Append average difference to heatmaps
+            heatmaps.append(avg_diff)
+
+    # Reshape average differences to match original image dimensions
+    heatmap_img = np.array(heatmaps).reshape((int((image_array.shape[1] - window_size) / stride) + 1,
+                                              int((image_array.shape[2] - window_size) / stride) + 1))
+
+    # Resize heatmap to match the original image dimensions
+    # resized_heatmap = heatmap_img.copy()
+    # resized_heatmap.resize((image_array.shape[1], image_array.shape[2]))
+    resized_heatmap = resize(heatmap_img, (image_array.shape[1], image_array.shape[2]))
+
+    plt.imshow(original_img)
+    plt.show()
+    # Plot the original image with heatmap overlay
+    plt.imshow(original_img)
+    plt.imshow(resized_heatmap, cmap='jet', alpha=0.5)
+    plt.colorbar()
+    plt.title(f'Heatmap Prediction: {predicted_class}')
+    plt.axis('off')
+    plt.show()
+
+
+def import_image(model, img_path: str):
+    img = load_img(img_path, target_size=(model.inputs[0].shape[1], model.inputs[0].shape[2])).convert('L')
+    img_tensor = img_to_array(img)
+    img_tensor = np.expand_dims(img_tensor, axis=0)
+    img_tensor /= 255.
+    prediction = model.predict(img_tensor)
+    prediction_type = "NORMAL" if prediction < 0.5 else "PNEUMONIA"
+    return img, img_tensor, prediction, prediction_type
+
+
+def run_s(model, show_occluded_images=False):
+    # base_tested_dir = join(base_dir, join("test", "PNEUMONIA"))
+    # tested_image_name = "person91_bacteria_448.jpeg"
+    base_tested_dir = join(base_dir, join("test", "NORMAL"))
+    tested_image_name = "IM-0007-0001.jpeg"
+    img_path = join(base_tested_dir, tested_image_name)
+    original_img, image_array, original_prediction, predicted_class = import_image(model, img_path)
+    window_size = 3
+    stride = 2
+    generate_heat_map(model, original_img, image_array, original_prediction, predicted_class, window_size, stride)
+
+
 def main(include_prints: bool = False) -> None:
     q1_a_model = load_q1_a_model()
 
@@ -209,6 +283,7 @@ def main(include_prints: bool = False) -> None:
     display_second_layer_outputs_of_virus_img(q1_a_model)
     display_second_layer_outputs_of_bacteria_img(q1_a_model)
 
+    run_s(q1_a_model)
     # # Not working well. if can't improve it - delete it.
     # generate_heat_map_for_normal(q1_a_model)
     # generate_heat_map_for_pneumonia(q1_a_model)
@@ -216,3 +291,50 @@ def main(include_prints: bool = False) -> None:
 
 if __name__ == "__main__":
     main()
+
+
+#
+#
+# from skimage.transform import resize
+# def display_heatmap(model):
+#     base_tested_dir = join(base_dir, join("test", "PNEUMONIA"))
+#     tested_image_name = "person91_bacteria_448.jpeg"
+#     img_path = join(base_tested_dir, tested_image_name)
+#
+#     img = load_img(img_path, target_size=(model.inputs[0].shape[1], model.inputs[0].shape[2])).convert('L')
+#     img_tensor = img_to_array(img)
+#     img_tensor = np.expand_dims(img_tensor, axis=0)
+#     img_tensor /= 255.
+#     prediction_result = model.predict(img_tensor)
+#
+#     filter_size = 3
+#     stride_size = 2
+#
+#     partial_predictions_set = []
+#     for row_idx in range(0, img_tensor.shape[1] - filter_size + 1, stride_size):
+#         for col_idx in range(0, img_tensor.shape[2] - filter_size + 1, stride_size):
+#             print(row_idx, col_idx)
+#             copied_tensor = np.copy(img_tensor)
+#             copied_tensor[:, row_idx:row_idx + filter_size, col_idx:col_idx + filter_size, :] = 0
+#             occlusion_prediction = model.predict(copied_tensor)
+#             prediction_diff = occlusion_prediction - prediction_result
+#             avg_diff = np.mean(np.abs(prediction_diff))
+#             partial_predictions_set.append(avg_diff)
+#
+#     heatmap_img = np.array(partial_predictions_set).reshape(
+#         (int((img_tensor.shape[1] - filter_size) / stride_size) + 1,
+#          int((img_tensor.shape[2] - filter_size) / stride_size) + 1)
+#     )
+#
+#     resized_heatmap = resize(heatmap_img, (img_tensor.shape[1], img_tensor.shape[2]))
+#
+#     plt.imshow(img)
+#     plt.axis('off')
+#     plt.show()
+#
+#     plt.imshow(img)
+#     plt.imshow(resized_heatmap, cmap='jet', alpha=0.5)
+#     plt.colorbar()
+#     plt.axis('off')
+#     plt.show()
+#
